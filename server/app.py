@@ -1,34 +1,40 @@
-#!/usr/bin/env python3
-
-from flask import Flask, make_response, jsonify, session
-from flask_migrate import Migrate
-
-from models import db, Article, User
+from flask import Flask, request, session, jsonify
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.secret_key = b'Y\xf1Xz\x00\xad|eQ\x80t \xca\x1a\x10K'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.secret_key = 'your_secret_key'  # Replace with a secure secret key
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'  # SQLite database
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json.compact = False
 
-migrate = Migrate(app, db)
+db = SQLAlchemy(app)
 
-db.init_app(app)
+from models import BlogPost
+
+@app.route('/articles/<int:id>')
+def view_article(id):
+    # Initialize 'page_views' in the session if it doesn't exist
+    session['page_views'] = session.get('page_views', 0)
+
+    # Increment 'page_views' for each request
+    session['page_views'] += 1
+
+    # Check if the user has viewed more than 3 pages
+    if session['page_views'] > 3:
+        return jsonify({'message': 'Maximum pageview limit reached'}), 401
+
+    # Retrieve the requested article by ID
+    article = BlogPost.query.get(id)
+
+    if article is None:
+        return jsonify({'message': 'Article not found'}), 404
+
+    return jsonify({'title': article.title, 'content': article.content})
 
 @app.route('/clear')
 def clear_session():
-    session['page_views'] = 0
-    return {'message': '200: Successfully cleared session data.'}, 200
-
-@app.route('/articles')
-def index_articles():
-
-    pass
-
-@app.route('/articles/<int:id>')
-def show_article(id):
-
-    pass
+    # Clear the session and reset 'page_views'
+    session.clear()
+    return jsonify({'message': 'Session cleared'})
 
 if __name__ == '__main__':
-    app.run(port=5555)
+    app.run(debug=True)
