@@ -1,43 +1,26 @@
-#!/usr/bin/env python3
+from flask import Flask
+from app import db, BlogPost
 
-from random import randint
+# Create an application context
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'  # SQLite database URI
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-from faker import Faker
+# Initialize the SQLAlchemy app with the application context
+db.init_app(app)
 
-from app import app
-from models import db, Article, User
+def seed_database():
+    with app.app_context():
+        db.create_all()
 
-fake = Faker()
+        post1 = BlogPost(title="Post 1", content="Content of Post 1")
+        post2 = BlogPost(title="Post 2", content="Content of Post 2")
+        post3 = BlogPost(title="Post 3", content="Content of Post 3")
+        post4 = BlogPost(title="Post 4", content="Content of Post 4")
+        post5 = BlogPost(title="Post 5", content="Content of Post 5")
 
-with app.app_context():
+        db.session.add_all([post1, post2, post3, post4, post5])
+        db.session.commit()
 
-    print("Deleting all records...")
-    Article.query.delete()
-    User.query.delete()
-
-    fake = Faker()
-
-    print("Creating users...")
-    users = [User(name=fake.name()) for i in range(25)]
-    db.session.add_all(users)
-
-    print("Creating articles...")
-    articles = []
-    for i in range(100):
-        content = fake.paragraph(nb_sentences=8)
-        preview = content[:25] + '...'
-        
-        article = Article(
-            author=fake.name(),
-            title=fake.sentence(),
-            content=content,
-            preview=preview,
-            minutes_to_read=randint(1,20),
-        )
-
-        articles.append(article)
-
-    db.session.add_all(articles)
-    
-    db.session.commit()
-    print("Complete.")
+if __name__ == "__main__":
+    seed_database()
